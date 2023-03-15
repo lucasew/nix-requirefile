@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+from urllib.request import urlopen, Request
+from argparse import ArgumentParser
+import logging
+import hashlib
+from pathlib import Path
+
+logging.basicConfig()
+
+logger = logging.getLogger(__name__)
+
+DATA_FOLDER = Path(__file__).parent / "data"
+
+(DATA_FOLDER / "http" / "sha1").mkdir(exist_ok=True, parents=True)
+(DATA_FOLDER / "http" / "sha256").mkdir(exist_ok=True, parents=True)
+
+parser = ArgumentParser()
+parser.add_argument("urls", type=str, nargs='+', help="URLs to fetch")
+parser.add_argument("-u,--user-agent", dest="user_agent", type=str, default="Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0", help="User agent for the requests")
+
+print(DATA_FOLDER)
+args = parser.parse_args()
+
+def add_to_file(file: Path, item: str):
+    items = set()
+    if file.exists():
+        for line in file.open('r'):
+            line = line.strip()
+            if line == "":
+                continue
+            items.add(line)
+    items.add(item)
+    items = list(items)
+    items.sort()
+    file.write_text('\n'.join(items))
+    return items
+
+for url in args.urls:
+    logger.info(f"Fetching '{url}'")
+    res = urlopen(
+        Request(url, headers={"User-Agent": args.user_agent})
+    )
+    sha256hasher = hashlib.sha256()
+    sha1hasher = hashlib.sha1()
+    while True:
+        buf = res.read(16*1024)
+        if not buf:
+            break
+        sha1hasher.update(buf)
+        sha256hasher.update(buf)
+    logger.info(f"Saving hash sha1 for '{url}'")
+    sha1digest = sha1hasher.hexdigest()
+    sha1file = DATA_FOLDER / "http" / "sha1" / f"{sha1digest}.txt"
+    add_to_file(sha1file, url)
+
+    logger.info(f"Saving hash sha256 for '{url}'")
+    sha256digest = sha256hasher.hexdigest()
+    sha256file = DATA_FOLDER / "http" / "sha256" / f"{sha256digest}.txt"
+    add_to_file(sha256file, url)
