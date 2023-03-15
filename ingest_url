@@ -4,10 +4,10 @@ from argparse import ArgumentParser
 import logging
 import hashlib
 from pathlib import Path
-
-logging.basicConfig()
+from time import time
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=10)
 
 DATA_FOLDER = Path(__file__).parent / "data"
 
@@ -18,8 +18,9 @@ parser = ArgumentParser()
 parser.add_argument("urls", type=str, nargs='+', help="URLs to fetch")
 parser.add_argument("-u,--user-agent", dest="user_agent", type=str, default="Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0", help="User agent for the requests")
 
-print(DATA_FOLDER)
 args = parser.parse_args()
+
+logger.info("Initializing...")
 
 def add_to_file(file: Path, item: str):
     items = set()
@@ -42,12 +43,16 @@ for url in args.urls:
     )
     sha256hasher = hashlib.sha256()
     sha1hasher = hashlib.sha1()
+    last_print=time()
     while True:
         buf = res.read(16*1024)
         if not buf:
             break
         sha1hasher.update(buf)
         sha256hasher.update(buf)
+        if (time() - last_print < 5):
+            logger.debug(f"Remaining for '{url}' {res.length/1024/1024}MB")
+            last_print = time()
     logger.info(f"Saving hash sha1 for '{url}'")
     sha1digest = sha1hasher.hexdigest()
     sha1file = DATA_FOLDER / "http" / "sha1" / f"{sha1digest}.txt"
