@@ -9,16 +9,16 @@ from time import time
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=10)
 
-DATA_FOLDER = Path(__file__).parent / "data"
-
-(DATA_FOLDER / "http" / "sha1").mkdir(exist_ok=True, parents=True)
-(DATA_FOLDER / "http" / "sha256").mkdir(exist_ok=True, parents=True)
-
 parser = ArgumentParser()
 parser.add_argument("urls", type=str, nargs='+', help="URLs to fetch")
 parser.add_argument("-u,--user-agent", dest="user_agent", type=str, default="Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0", help="User agent for the requests")
+parser.add_argument("-o,--output", dest="output", type=Path, default=Path(__file__).parent / "data")
 
 args = parser.parse_args()
+
+(args.output / "http" / "sha1").mkdir(exist_ok=True, parents=True)
+(args.output / "http" / "sha256").mkdir(exist_ok=True, parents=True)
+
 
 logger.info("Initializing...")
 
@@ -36,10 +36,11 @@ def add_to_file(file: Path, item: str):
     file.write_text('\n'.join(items))
     return items
 
-for url in args.urls:
+def recon_url(url: str):
     logger.info(f"Fetching '{url}'")
     res = urlopen(
-        Request(url, headers={"User-Agent": args.user_agent})
+        Request(url, headers={"User-Agent": args.user_agent}),
+        timeout=5
     )
     sha256hasher = hashlib.sha256()
     sha1hasher = hashlib.sha1()
@@ -55,10 +56,24 @@ for url in args.urls:
             last_print = time()
     logger.info(f"Saving hash sha1 for '{url}'")
     sha1digest = sha1hasher.hexdigest()
-    sha1file = DATA_FOLDER / "http" / "sha1" / f"{sha1digest}.txt"
+    sha1file = args.output / "http" / "sha1" / f"{sha1digest}.txt"
     add_to_file(sha1file, url)
 
     logger.info(f"Saving hash sha256 for '{url}'")
     sha256digest = sha256hasher.hexdigest()
-    sha256file = DATA_FOLDER / "http" / "sha256" / f"{sha256digest}.txt"
+    sha256file = args.output / "http" / "sha256" / f"{sha256digest}.txt"
     add_to_file(sha256file, url)
+
+for url in args.urls:
+    timeout_remaining = 3
+    while True:
+        try:
+            recon_url(url)
+            break
+        except TimeoutError:
+            if timeout_remaining <= 0:
+                logger.debug("Giving up: too many retries")
+                break
+            logger.debug("Request timeout, retrying...")
+            timeout_remaining -= 1
+            continue
