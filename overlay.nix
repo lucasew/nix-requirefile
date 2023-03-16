@@ -1,3 +1,5 @@
 self: super: {
-  requireFile = self.callPackage ./package.nix {};
+  requireFile = self.callPackage ./package.nix {
+    inherit (super) requireFile;
+  };
 }
