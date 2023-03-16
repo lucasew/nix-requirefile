@@ -54,9 +54,9 @@ let
       inherit urlsDrv urls;
     };
   };
-in if !(isFlat && hasHash && hasUrls) then
-  originalRequireFile
-else if !hasSources then
+in if !hasSources then
   builtins.trace "nix-requirefile: no data source was configured" originalRequireFile
+else  if !(isFlat && hasHash && hasUrls) then
+  originalRequireFile
 else
   builtins.trace "nix-requirefile: found urls for ${drvName}" item
