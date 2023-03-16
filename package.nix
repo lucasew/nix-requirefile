@@ -39,6 +39,7 @@ let
       {
         for src in $srcs; do
           cat "$src/http/${hashAlgo}/$hash.txt" || true
+          cat "$src/${hashAlgo}/$hash.txt" || true
         done
       } > $out
     '';
