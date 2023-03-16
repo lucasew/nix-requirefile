@@ -2,7 +2,7 @@
 , fetchurl
 , stdenvNoCC
 , nix
-, requireFileSources ? [ ./data ]
+, requireFileSources ? [ ]
 }:
 { name ? null
 , sha256 ? null
@@ -19,6 +19,7 @@ let
   isFlat = hashMode == "flat";
   hasHash = sha256 != null || sha1 != null;
   hasUrls = length urls > 0;
+  hasSources = length requireFileSources > 0;
 
   drvName = if name == null then baseNameOf (toString url) else name;
   hashAlgo = if sha256 != null then "sha256" else "sha1";
@@ -53,8 +54,9 @@ let
       inherit urlsDrv urls;
     };
   };
-
 in if !(isFlat && hasHash && hasUrls) then
   originalRequireFile
+else if !hasSources then
+  builtins.trace "nix-requirefile: no data source was configured" originalRequireFile
 else
   builtins.trace "nix-requirefile: found urls for ${drvName}" item
