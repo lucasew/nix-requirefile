@@ -1,6 +1,6 @@
-self: super: {
-  requireFile = self.callPackage ./package.nix {
-    inherit (super) requireFile;
+final: prev: {
+  requireFile = final.callPackage ./package.nix {
+    inherit (prev) requireFile;
   };
-  requireFile-ingest = self.python3Packages.callPackage ./package-ingest.nix { };
+  requireFile-ingest = prev.python3Packages.callPackage ./package-ingest.nix { };
 }
